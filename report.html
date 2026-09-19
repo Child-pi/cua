@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cua 深度研究與架構評估報告 | AI Agent 桌面操作與嵌入式系統適配性分析</title>
+    <style>
+        :root {
+            --primary: #0284c7;
+            --primary-light: #0ea5e9;
+            --primary-dark: #0369a1;
+            --primary-bg: rgba(14, 165, 233, 0.08);
+            --accent: #8b5cf6;
+            --accent-light: #a78bfa;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-main: #0b0f19;
+            --bg-card: #111827;
+            --bg-card-hover: #1f2937;
+            --bg-code: #030712;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-bright: #ffffff;
+            --border: #1f2937;
+            --border-light: #374151;
+            --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --radius-lg: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            line-height: 1.7;
+            padding: 0;
+            margin: 0;
+            scroll-behavior: smooth;
+        }
+
+        /* Top Header & Hero */
+        header.hero {
+            background: linear-gradient(135deg, #0b1528 0%, #0f172a 50%, #17102e 100%);
+            border-bottom: 1px solid var(--border-light);
+            padding: 60px 24px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header.hero::before {
+            content: "";
+            position: absolute;
+            top: -50%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, rgba(139, 92, 246, 0.05) 60%, transparent 80%);
+            pointer-events: none;
+        }
+
+        .badge-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 18px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-blue { background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); }
+        .badge-purple { background: rgba(139, 92, 246, 0.15); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
+        .badge-green { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-orange { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        h1.title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--text-bright);
+            margin-bottom: 16px;
+            letter-spacing: -0.5px;
+            line-height: 1.25;
+        }
+
+        h1.title span {
+            background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-muted);
+            max-width: 860px;
+            margin: 0 auto 24px;
+        }
+
+        .meta-info {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            flex-wrap: wrap;
+        }
+
+        /* Container Layout */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* Quick Navigation Bar */
+        .nav-bar {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 14px 20px;
+            margin-bottom: 40px;
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 16px;
+            z-index: 100;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(12px);
+        }
+
+        .nav-bar a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+        }
+
+        .nav-bar a:hover {
+            color: var(--primary-light);
+            background: var(--primary-bg);
+        }
+
+        /* Section Layout */
+        section {
+            margin-bottom: 50px;
+            scroll-margin-top: 90px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .section-num {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            color: white;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        h2.section-title {
+            font-size: 1.7rem;
+            color: var(--text-bright);
+            font-weight: 700;
+        }
+
+        /* Cards and Grids */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .grid-4 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .card:hover {
+            border-color: var(--border-light);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .icon-blue { background: rgba(14, 165, 233, 0.15); color: #38bdf8; }
+        .icon-purple { background: rgba(139, 92, 246, 0.15); color: #c084fc; }
+        .icon-green { background: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .icon-amber { background: rgba(245, 158, 11, 0.15); color: #fbbf24; }
+        .icon-red { background: rgba(239, 68, 68, 0.15); color: #f87171; }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-bright);
+        }
+
+        .card p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        /* Callouts */
+        .callout {
+            border-left: 4px solid var(--primary);
+            background: rgba(14, 165, 233, 0.08);
+            padding: 16px 20px;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            margin: 20px 0;
+        }
+
+        .callout-title {
+            font-weight: 700;
+            color: #38bdf8;
+            margin-bottom: 6px;
+            font-size: 0.95rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .callout-warn {
+            border-left-color: var(--warning);
+            background: rgba(245, 158, 11, 0.08);
+        }
+        .callout-warn .callout-title { color: #fbbf24; }
+
+        .callout-danger {
+            border-left-color: var(--danger);
+            background: rgba(239, 68, 68, 0.08);
+        }
+        .callout-danger .callout-title { color: #f87171; }
+
+        .callout-success {
+            border-left-color: var(--success);
+            background: rgba(16, 185, 129, 0.08);
+        }
+        .callout-success .callout-title { color: #34d399; }
+
+        /* Tables */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.93rem;
+            text-align: left;
+        }
+
+        th {
+            background: #1e293b;
+            color: var(--text-bright);
+            font-weight: 600;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        td {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            vertical-align: top;
+        }
+
+        tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        tr:hover {
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        /* Code Blocks */
+        pre {
+            background: var(--bg-code);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            overflow-x: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            font-size: 0.88rem;
+            color: #e2e8f0;
+            line-height: 1.5;
+            margin: 14px 0;
+        }
+
+        code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            background: rgba(255, 255, 255, 0.08);
+            color: #38bdf8;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        pre code {
+            background: none;
+            color: inherit;
+            padding: 0;
+            border-radius: 0;
+        }
+
+        /* Diagrams & Visuals */
+        .diagram-container {
+            background: #090d16;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        /* Accordions / Details */
+        details {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+
+        summary {
+            padding: 14px 18px;
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--text-bright);
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid transparent;
+            transition: background 0.2s ease;
+        }
+
+        details[open] summary {
+            border-bottom-color: var(--border);
+            background: rgba(255, 255, 255, 0.04);
+            color: var(--primary-light);
+        }
+
+        .details-content {
+            padding: 18px;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Footer */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 24px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            background: #080c14;
+        }
+
+        footer a {
+            color: var(--primary-light);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="badge-group">
+        <span class="badge badge-blue">AI Agent Architecture</span>
+        <span class="badge badge-purple">Computer-Use 2.0</span>
+        <span class="badge badge-green">No-Foreground Execution</span>
+        <span class="badge badge-orange">Embedded Feasibility</span>
+    </div>
+    <h1 class="title">Cua (trycua/cua) <span>深度架構研究與評估報告</span></h1>
+    <p class="subtitle">全面解析開源 Computer-Use 框架：用途情境、操作展示、核心黑科技與嵌入式系統（Embedded Systems）適配性深度論證</p>
+    <div class="meta-info">
+        <span><strong>目標專案:</strong> <a href="https://github.com/Child-pi/cua" style="color:#38bdf8; text-decoration:none;">Child-pi/cua</a> (Fork of trycua/cua)</span>
+        <span><strong>分析版本:</strong> v0.28.2</span>
+        <span><strong>核心技術:</strong> Rust, Swift, Python, TypeScript, UniFFI, MCP</span>
+        <span><strong>報告產出日期:</strong> 2026 年 9 月</span>
+    </div>
+</header>
+
+<div class="container">
+
+    <!-- 導航列 -->
+    <nav class="nav-bar">
+        <a href="#summary">📋 執行摘要</a>
+        <a href="#purpose">🎯 核心用途與四大組件</a>
+        <a href="#special-features">⚡ 核心特別功能與黑科技</a>
+        <a href="#showcase">🚀 如何展示與運行示範</a>
+        <a href="#embedded-evaluation">🔬 嵌入式系統適配性分析</a>
+        <a href="#comparison">📊 技術對比與結論建議</a>
+    </nav>
+
+    <!-- 1. 執行摘要 -->
+    <section id="summary">
+        <div class="section-header">
+            <div class="section-num">1</div>
+            <h2 class="section-title">專案執行摘要 (Executive Summary)</h2>
+        </div>
+        <div class="card" style="margin-bottom: 20px;">
+            <p style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 14px;">
+                <strong>Cua</strong> 是一個旨在<strong>「為 AI Agent 提供真實可操作的電腦環境 (Give AI agents computers they can use)」</strong>的次世代開源基礎架構。它突破了早期 Anthropic 或傳統 RPA「單純透過螢幕截圖識別並暴力搶佔滑鼠游標」的侷限，提出並實踐了 <strong>Computer-Use 2.0</strong> 哲學。
+            </p>
+            <p>
+                Cua 將自動化表面解耦為三層：<strong>代碼執行面 (Coding Surface)</strong>、<strong>結構化工具面 (Tool-use / MCP Surface)</strong> 與 <strong>UI 自動化面 (UI Automation Surface)</strong>。其旗艦組件 <strong>Cua Driver</strong> 採用 Rust 打造，透過原生作業系統無障礙（Accessibility）與視窗路由機制，實現了業界罕見的<strong>「背景靜默操作（Best-Effort Background Execution / No-Foreground Contract）」</strong>，讓 AI 在操作計算機、辦公軟體或後台系統時，完全不搶奪使用者當前前景視窗與滑鼠焦點。
+            </p>
+        </div>
+
+        <div class="grid-3">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon icon-blue">🎯</div>
+                    <div class="card-title">三大操作表面整合</div>
+                </div>
+                <p>AI 不必每個動作都點滑鼠。能跑 Script 就跑 Script，有 MCP/API 就調 API，只有在無 API 的原生桌面軟體才發動精確 UI 操作。</p>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon icon-purple">👻</div>
+                    <div class="card-title">不搶佔滑鼠與前景</div>
+                </div>
+                <p>業界首創「No-Foreground Contract」：使用者在終端機寫程式時，AI 可以在背景同時驅動 LibreOffice、計算機或特定視窗。</p>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon icon-green">🖥️</div>
+                    <div class="card-title">全生態四位一體</div>
+                </div>
+                <p>涵蓋驅動核心 (Driver)、雲端沙盒艦隊 (Fleets)、Apple Silicon 虛擬化 (Lume) 與評測基準 (Cua Bench)。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2. 核心用途與四大組件 -->
+    <section id="purpose">
+        <div class="section-header">
+            <div class="section-num">2</div>
+            <h2 class="section-title">核心用途與四大子系統架構</h2>
+        </div>
+
+        <p style="margin-bottom: 20px; color: var(--text-muted);">
+            Cua 專門為需要橫跨不同應用程式、無公開 API 的專屬系統（如舊版 ERP、政府終端、本機 GUI 工具）以及跨軟體協同工作之 AI Agent 提供電腦操作能力。整個 Repository 分為四大支柱：
+        </p>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon icon-blue">🚗</div>
+                    <div>
+                        <div class="card-title">1. Cua Driver (本機桌面驅動核心)</div>
+                        <span class="badge badge-blue" style="margin-top: 4px;">Rust Core + UniFFI + MCP</span>
+                    </div>
+                </div>
+                <p><strong>用途：</strong>跨平台（macOS、Windows、Linux）後台桌面操控引擎。作為 Agent 與 OS 之間的介面，可透過 stdio MCP 直接串接 Claude Code、Cursor、Codex 等 Agent，或透過 Python / TypeScript 原生 SDK 呼叫。</p>
+                <ul style="margin-top: 10px; padding-left: 20px; font-size: 0.9rem; color: var(--text-muted);">
+                    <li><strong>macOS:</strong> Accessibility API + ScreenCaptureKit + SkyLight 路由。</li>
+                    <li><strong>Windows:</strong> UI Automation (UIA) + Win32 PostMessage 訊息佇列。</li>
+                    <li><strong>Linux:</strong> AT-SPI over D-Bus (純 Rust zbus) + X11 MIT-SHM / Wayland layer-shell。</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon icon-purple">☁️</div>
+                    <div>
+                        <div class="card-title">2. Cua Fleets & Sandbox (雲端隔離沙盒)</div>
+                        <span class="badge badge-purple" style="margin-top: 4px;">Docker + Kasm + XFCE</span>
+                    </div>
+                </div>
+                <p><strong>用途：</strong>為不受信任的 Agent 或大規模平行批次任務提供完全隔離的雲端 Linux 桌面容器。Agent 可以在雲端隨選建立桌面（如 LibreOffice、Inkscape、瀏覽器）、執行自動化、截圖驗證並即時銷毀。</p>
+                <ul style="margin-top: 10px; padding-left: 20px; font-size: 0.9rem; color: var(--text-muted);">
+                    <li>支援資源池（Pools）預熱與動態認領（Claims）。</li>
+                    <li>內建 <code>computer-server</code>（Port 8000）提供遠端指令與 GUI 互動。</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon icon-green">🍏</div>
+                    <div>
+                        <div class="card-title">3. Lume (Apple Silicon 原生虛擬化)</div>
+                        <span class="badge badge-green" style="margin-top: 4px;">Swift + Virtualization.Framework</span>
+                    </div>
+                </div>
+                <p><strong>用途：</strong>專為 Apple Silicon（M 系列晶片）設計的高性能 macOS / Linux 虛擬機管理工具。解決了以往 macOS 無法自動化建立乾淨環境的痛點。</p>
+                <ul style="margin-top: 10px; padding-left: 20px; font-size: 0.9rem; color: var(--text-muted);">
+                    <li>從官方 IPSW 映像檔一鍵安裝乾淨 macOS（Sonoma, Sequoia, Tahoe）。</li>
+                    <li>全自動無人值守設定（自動建立 lume 帳號、啟用 SSH、關閉休眠鎖定）。</li>
+                    <li>支援動態磁碟擴充與自動化 VNC 關閉 SIP (System Integrity Protection)。</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon icon-amber">📈</div>
+                    <div>
+                        <div class="card-title">4. Cua Bench & Cua-S1 (評測與專用模型)</div>
+                        <span class="badge badge-orange" style="margin-top: 4px;">Evaluation + Trajectory Export</span>
+                    </div>
+                </div>
+                <p><strong>用途：</strong>標準化評估 Computer-Use Agent 能力的基準測試框架。提供無須虛擬機的模擬任務環境，自動驗證 Agent 完成度並輸出 0.0 ~ 1.0 Reward。</p>
+                <ul style="margin-top: 10px; padding-left: 20px; font-size: 0.9rem; color: var(--text-muted);">
+                    <li>匯出軌跡資料（Trajectories）供強化學習（RL）或監督微調（SFT）。</li>
+                    <li><strong>Cua-S1:</strong> 專為表格與介面操作研發的輕量專家模型（Dry-run 安全防護機制）。</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3. 核心特別功能與黑科技 -->
+    <section id="special-features">
+        <div class="section-header">
+            <div class="section-num">3</div>
+            <h2 class="section-title">核心特別功能與獨家技術亮點 (Key Highlights)</h2>
+        </div>
+
+        <div class="grid-2">
+            <!-- 特性 1 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon icon-blue">🛡️</div>
+                    <div class="card-title">1. No-Foreground Contract (背景靜默控制)</div>
+                </div>
+                <p>
+                    傳統 RPA 或自動化腳本執行時會強行將目標視窗彈至最上層並奪取滑鼠，使工程師無法同時工作。Cua Driver 顛覆此做法：
+                </p>
+                <ul style="margin-top: 10px; padding-left: 20px; color: var(--text-muted); font-size: 0.9rem;">
+                    <li><strong>不提升視窗 Z 軸：</strong>視窗留在被遮擋的背景中。</li>
+                    <li><strong>不移動實體游標：</strong>實體滑鼠完全由使用者掌控。</li>
+                    <li><strong>定向事件投遞：</strong>macOS 透過 <code>AXPerformAction</code> / SkyLight 路由；Windows 透過 <code>UIA.Invoke</code> / <code>PostMessage</code>；Linux 透過 AT-SPI <code>DoAction</code>。</li>
+                </ul>
+            </div>
+
+            <!-- 特性 2 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon icon-purple">🎯</div>
+                    <div class="card-title">2. 雙重感知單次返回 (Dual Perception)</div>
+                </div>
+                <p>
+                    在呼叫 <code>get_window_state</code> 時，Cua 同時回傳<strong>無障礙樹狀結構 (Accessibility Tree)</strong> 與<strong>高解析度視窗截圖</strong>：
+                </p>
+                <ul style="margin-top: 10px; padding-left: 20px; color: var(--text-muted); font-size: 0.9rem;">
+                    <li><strong>破解「a11y 說謊」：</strong>Electron 或 Webview 經常回報虛假狀態（已填入但畫面未更新）；雙感知允許 Agent 以視覺驗證結構。</li>
+                    <li><strong>免重覆截圖切換：</strong>視覺定位（px）與語意定位（ax）共用同一快照，大幅減少延遲與 Token 消耗。</li>
+                </ul>
+            </div>
+
+            <!-- 特性 3 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon icon-green">🪜</div>
+                    <div class="card-title">3. 階梯式自動降級階梯 (Action Ladder)</div>
+                </div>
+                <p>
+                    針對視窗動作，Cua 定義了極其嚴密的階梯式降級與反饋機制：
+                </p>
+                <div class="diagram-container" style="padding: 14px; margin: 10px 0; text-align: left; font-size: 0.85rem;">
+                    <div style="color: #34d399;">❶ <strong>首選 ax 階 (語意):</strong> <code>element_index</code> 驅動，可驅動驗證，背景安全執行。</div>
+                    <div style="color: #fbbf24; margin: 6px 0;">❷ <strong>降級 px 階 (座標):</strong> a11y 缺失或空標籤時，直接按快照 <code>(x, y)</code> 點擊。</div>
+                    <div style="color: #f87171;">❸ <strong>最後升級前景:</strong> 僅在目標僅接受實體 DirectInput 遊戲或 Canvas 時，啟用 <code>delivery_mode: "foreground"</code>。</div>
+                </div>
+                <p style="font-size: 0.88rem;">每個動作回傳包含 <code>verified: bool</code>、<code>effect: "confirmed" | "unverifiable" | "suspected_noop"</code> 與機器可讀的 <code>escalation</code> 提示。</p>
+            </div>
+
+            <!-- 特性 4 -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon icon-amber">🎨</div>
+                    <div class="card-title">4. 獨立合成多游標圖層 (Multi-Cursor Overlay)</div>
+                </div>
+                <p>
+                    為實現直觀的人機監控，Cua 透過 <code>tiny-skia</code>、dotLottie 及 OS 圖層合成技術，在螢幕上渲染<strong>獨立的虛擬彩繪游標</strong>：
+                </p>
+                <ul style="margin-top: 10px; padding-left: 20px; color: var(--text-muted); font-size: 0.9rem;">
+                    <li><strong>游標不佔用系統硬體：</strong>使用者能清晰看見 AI 在哪裡點擊，而真實滑鼠仍在前景打字。</li>
+                    <li><strong>多工作階段並行（Palette Sessions）：</strong>可分配不同顏色（crimson, amber, aqua, mint），支援數個 Agent 游標同時在多個視窗起舞。</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="callout callout-success">
+            <div class="callout-title">🔒 原生安全性與權限模式 (Permission Modes)</div>
+            <p>Cua Driver 內建三種安全等級：<code>standard</code>（預設無彈窗操作）、<code>bounded</code>（僅允許 Manifest 宣告之白名單 App、特定目錄與網域）、<code>unrestricted</code>。若要附著已登入的 Chrome/Chromium Profile，必須明確宣告 <code>--grant existing-profile</code>，防止憑證遭 Agent 惡意竊取。</p>
+        </div>
+    </section>
+
+    <!-- 4. 如何展示與運行示範 -->
+    <section id="showcase">
+        <div class="section-header">
+            <div class="section-num">4</div>
+            <h2 class="section-title">如何展示 Cua (Showcase & Demos)</h2>
+        </div>
+
+        <p style="margin-bottom: 20px; color: var(--text-muted);">
+            展示 Cua 時，可以依據受眾與環境選擇以下三種極具震撼力的展示途徑：
+        </p>
+
+        <!-- 展示途徑 1 -->
+        <details open>
+            <summary>🎯 展示範例 A：本機背景計算機閉環驗證 (最快 3 分鐘上手，適合一般展示)</summary>
+            <div class="details-content">
+                <p><strong>展示效果：</strong>使用者在終端中執行指令或與 Claude/Cursor 對話，桌面上「計算機」在背景被打開，自動按壓 6 × 7 並驗證畫面顯示 42，過程中滑鼠游標完全不動，終端機焦點未被奪走。</p>
+                
+                <h4 style="color: var(--text-bright); margin: 12px 0 6px;">步驟 1：安裝 Cua Driver</h4>
+                <pre><code># macOS / Linux 一鍵安裝
+/bin/bash -c "$(curl -fsSL https://cua.ai/driver/install.sh)"
+
+# 啟動守護行程並授予系統權限 (macOS)
+open -n -g -a CuaDriver --args serve
+cua-driver permissions grant
+cua-driver status
+cua-driver doctor</code></pre>
+
+                <h4 style="color: var(--text-bright); margin: 12px 0 6px;">步驟 2：測試底層 API 偵測運行中的桌面 App</h4>
+                <pre><code>cua-driver call list_apps</code></pre>
+
+                <h4 style="color: var(--text-bright); margin: 12px 0 6px;">步驟 3：串接 AI Agent (以 Claude Code 或 Cursor 為例)</h4>
+                <pre><code># 自動將 Cua Driver 作為 MCP 工具掛載至 Claude Code
+claude mcp add --transport stdio cua-driver -- cua-driver mcp
+
+# 在 Claude Code 輸入提示詞開始展示
+> 請打開計算機，計算 6 乘以 7，並驗證螢幕上的運算結果是否為 42。</code></pre>
+            </div>
+        </details>
+
+        <!-- 展示途徑 2 -->
+        <details>
+            <summary>🔥 展示範例 B：National Records System 多游標多視窗並行 (視覺衝擊最強)</summary>
+            <div class="details-content">
+                <p><strong>展示效果：</strong>螢幕切分為四個象限，分別運行 4 種不同 UI 技術架構的舊版檔案終端（Win32 GDI 無 a11y、.NET WinForms、.NET WPF、Electron）。中央由人類在 Master 終端點擊一次，周圍 4 個視窗瞬間出現 <strong>4 隻不同顏色（紅/黃/水藍/綠）的合成游標</strong>，同時在背景同步提交資料並跳動計數器，無任何視窗被拉抬到最上層！</p>
+                <pre><code># 位於本專案 samples/driver/multi-cursor 目錄下
+cd samples/driver/multi-cursor
+cargo build
+dotnet build dotnet/winforms/winforms.csproj
+dotnet build dotnet/wpf/wpf.csproj
+npm install --prefix electron
+
+# 啟動多視窗調度器展示
+.\target\debug\orchestrator.exe --auto</code></pre>
+            </div>
+        </details>
+
+        <!-- 展示途徑 3 -->
+        <details>
+            <summary>🎵 展示範例 C：CUA Jukebox 電腦交響樂隊 (極致時序與控制展示)</summary>
+            <div class="details-content">
+                <p><strong>展示效果：</strong>將一段 MIDI 音樂拆解為不同樂器軌道（大鼓、小鼓、Bass、琴鍵），每個視窗為獨立 Minigame 介面。背景的多個 Cua Driver 游標依據樂譜節奏，精確在幾十毫秒內點擊背景琴鍵與打擊板，透過 OS 音訊合成輸出完整多部合奏！展示 Cua 超乎尋常的並行事件調度能力。</p>
+                <pre><code># 位於本專案 samples/driver/jukebox
+cd samples/driver/jukebox
+cargo run</code></pre>
+            </div>
+        </details>
+
+        <!-- 展示途徑 4 -->
+        <details>
+            <summary>☁️ 展示範例 D：Cua Fleets 雲端桌面隔離沙盒 (企業與測試場景)</summary>
+            <div class="details-content">
+                <p><strong>展示效果：</strong>透過 Python 呼叫 <code>cua-sandbox</code> SDK，在雲端動態認領（Claim）一台 Linux 容器桌面，背景啟動 LibreOffice Calc 填入資料，抓取截圖並將雜湊值回傳本機驗證，驗證完畢即刻銷毀容器，完全不影響本機環境。</p>
+                <pre><code># 安裝 Sandbox SDK
+uv pip install cua-sandbox
+
+# 執行雲端測試腳本 (位於 samples/python/1_fleet_throughput.py)
+python samples/python/1_fleet_throughput.py</code></pre>
+            </div>
+        </details>
+    </section>
+
+    <!-- 5. 嵌入式系統適配性分析 -->
+    <section id="embedded-evaluation">
+        <div class="section-header">
+            <div class="section-num">5</div>
+            <h2 class="section-title">深度評估：適合 Embedded System（嵌入式系統）嗎？</h2>
+        </div>
+
+        <div class="callout callout-danger" style="margin-bottom: 24px;">
+            <div class="callout-title">⚠️ 核心結論先行 (Key Takeaway)</div>
+            <p style="font-size: 1.05rem; color: var(--text-bright);">
+                <strong>Cua 本身「極不適合」直接部署於傳統嵌入式系統、微控制器（MCU）或輕量 IoT 閘道器內部。</strong><br>
+                即使在具備螢幕的高階邊緣裝置（如 Raspberry Pi 5 或 Jetson），以 Cua 的「桌面視圖 + 多模態視覺 Agent」架構驅動嵌入式 HMI，在架構設計上也是<strong>極度過度設計（Overkill）且極不合適</strong>的。然而，若將 Cua 部署於外部主機，將嵌入式裝置作為「被測物（DUT）」進行非侵入式外部黑盒測試，則具有特殊潛力。
+            </p>
+        </div>
+
+        <h3 style="color: var(--text-bright); margin: 24px 0 16px;">一、 嵌入式系統分類維度剖析矩陣</h3>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>設備分類</th>
+                        <th>代表硬體與架構</th>
+                        <th>適配可行性</th>
+                        <th>核心技術阻礙與矛盾點</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>微控制器 / 裸機 / RTOS</strong></td>
+                        <td>STM32, ESP32, RP2040 (FreeRTOS, Zephyr)</td>
+                        <td><span class="badge badge-orange" style="color:#ef4444; border-color:#ef4444;">❌ 絕對不可行</span></td>
+                        <td>
+                            無 MMU、無作業系統等級進程、記憶體僅 KB 級。Cua 依賴 Rust <code>tokio</code> 非同步執行緒、D-Bus、圖形系統，完全無法編譯與運行。
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>無顯示無頭 Linux (Headless IoT)</strong></td>
+                        <td>OpenWrt 路由器, 邊緣感測閘道器 (Buildroot / Yocto)</td>
+                        <td><span class="badge badge-orange" style="color:#ef4444; border-color:#ef4444;">❌ 邏輯衝突</span></td>
+                        <td>
+                            無任何圖形顯示（X11/Wayland）與無障礙匯流排。無頭裝置本就使用 CLI、SSH、REST API、MQTT 交互，引入 GUI Computer-Use 畫蛇添足且消耗資源。
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>專屬嵌入式 HMI / 觸控面板</strong></td>
+                        <td>POS 機、工控機、車載螢幕、醫療儀器 (Qt EGLFS, LVGL)</td>
+                        <td><span class="badge badge-orange" style="color:#f59e0b; border-color:#f59e0b;">⚠️ 嚴重受阻</span></td>
+                        <td>
+                            大多數嵌入式 GUI 為節省開銷與開機時間，<strong>直接寫入 Framebuffer / DRM-KMS（如 Qt eglfs）</strong>，根本沒有 X11/Wayland 視窗管理員，更剝離了 AT-SPI D-Bus 服務。Cua 的 <code>platform-linux</code> 無法掛載事件。
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>高階邊緣單板電腦 (Edge SBC)</strong></td>
+                        <td>Raspberry Pi 5, Jetson Orin (運行完整 Ubuntu Desktop)</td>
+                        <td><span class="badge badge-green" style="color:#34d399; border-color:#34d399;">🟡 理論可行但代價高</span></td>
+                        <td>
+                            若編譯為 <code>aarch64</code> 且安裝標準桌面，<code>cua-driver</code> 本體可運行。但多模態 VLM 本地推論吃滿算力；若回傳雲端推論，頻寬與延遲無法滿足工控即時性（Real-time）。
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3 style="color: var(--text-bright); margin: 28px 0 16px;">二、 關鍵瓶頸與相依性衝突剖析</h3>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-title" style="color: #f87171; margin-bottom: 10px;">1. Linux 平台相依性過於龐大</div>
+                <p>查閱 <code>libs/cua-driver/rust/crates/platform-linux/Cargo.toml</code>，其底層緊密綁定：</p>
+                <ul style="padding-left: 18px; margin-top: 8px; font-size: 0.9rem; color: var(--text-muted);">
+                    <li><code>atspi</code> (依賴 D-Bus 系統守護行程)</li>
+                    <li><code>x11rb</code> / <code>x11</code> (依賴 X11 MIT-SHM 共用記憶體)</li>
+                    <li><code>wayland-client</code> 與 <code>wayland-protocols-wlr</code></li>
+                </ul>
+                <p style="margin-top: 8px; font-size: 0.9rem;">嵌入式 Linux 系統為求極致精簡與開機秒開，通常會將上述套件完全裁剪。</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title" style="color: #f87171; margin-bottom: 10px;">2. 算力、記憶體與即時性 (Real-time) 矛盾</div>
+                <p>Computer-Use 的本質是「截圖 &rarr; 多模態大模型視覺推理 &rarr; 決策點擊」。</p>
+                <ul style="padding-left: 18px; margin-top: 8px; font-size: 0.9rem; color: var(--text-muted);">
+                    <li><strong>邊緣算力不足：</strong>高解析度 VLM 推理一次動輒 2~5 秒，且需 8GB+ 顯存。</li>
+                    <li><strong>頻寬浪費：</strong>連續傳送未壓縮/壓縮截圖至雲端大模型消耗大量蜂巢網路頻寬。</li>
+                    <li><strong>缺乏確定性：</strong>嵌入式控制要求 Deterministic（確定性）與毫秒響應，大模型機率決策無法用於安全關鍵（Safety-Critical）工控。</li>
+                </ul>
+            </div>
+        </div>
+
+        <h3 style="color: var(--text-bright); margin: 28px 0 16px;">三、 若要在嵌入式領域應用，何種場景才合理？</h3>
+
+        <div class="card" style="background: rgba(14, 165, 233, 0.04); border-color: rgba(14, 165, 233, 0.3);">
+            <div class="card-title" style="color: #38bdf8; margin-bottom: 12px;">✅ 唯一具實用價值的切入點：外部非侵入式 QA 驗證測試台 (HIL Testing)</div>
+            <p style="margin-bottom: 12px;">
+                不要將 Cua 塞進嵌入式晶片中，而是將 Cua 作為<strong>「自動化產線質檢員」</strong>部署在測試電腦上：
+            </p>
+            <div class="diagram-container" style="text-align: left; font-size: 0.9rem; line-height: 1.8;">
+                <code>[外部測試電腦 (執行 Cua + AI Agent)]</code><br>
+                &nbsp;&nbsp;├── <strong>影像輸入：</strong> 透過 HDMI 採集卡或工業相機讀取嵌入式裝置螢幕。<br>
+                &nbsp;&nbsp;├── <strong>控制輸出：</strong> 透過硬體模擬器（如 USB HID 模擬滑鼠/鍵盤、串口、CANoe）傳送事件。<br>
+                &nbsp;&nbsp;└── <strong>目標被測物：</strong> 實體 POS 機、車載中控儀表板、醫療儀器 (免修改任何韌體程式碼)。
+            </div>
+            <p style="font-size: 0.9rem; color: var(--text-muted); margin-top: 10px;">
+                在此架構下，Cua Bench 可負責比對 UI 回饋並計算任務成功率，實現免侵入式、純視覺黑盒的自動化迴歸測試。
+            </p>
+        </div>
+    </section>
+
+    <!-- 6. 技術對比與結論建議 -->
+    <section id="comparison">
+        <div class="section-header">
+            <div class="section-num">6</div>
+            <h2 class="section-title">業界方案對比與總結建議</h2>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>評估項目</th>
+                        <th>Cua (trycua/cua)</th>
+                        <th>Anthropic Computer Use</th>
+                        <th>傳統 RPA (UiPath / PyAutoGUI)</th>
+                        <th>嵌入式專用自動化 (Qt Squish / uinput)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>背景靜默控制</strong></td>
+                        <td><span style="color:#34d399; font-weight:bold;">✅ 頂級 (不搶游標與視窗)</span></td>
+                        <td>❌ 否 (暴力接管真實滑鼠)</td>
+                        <td>❌ 否 (通常需獨佔桌面)</td>
+                        <td>⚠️ 視驅動層級而定</td>
+                    </tr>
+                    <tr>
+                        <td><strong>感知機制</strong></td>
+                        <td><span style="color:#34d399; font-weight:bold;">雙感知 (a11y Tree + 截圖)</span></td>
+                        <td>純視覺截圖 (Pure Vision)</td>
+                        <td>DOM / 靜態 Windows 控制項</td>
+                        <td>內部符號表 / 物件樹遍歷</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Agent 協議</strong></td>
+                        <td><span style="color:#34d399; font-weight:bold;">標準 MCP (stdio) + SDK</span></td>
+                        <td>Anthropic API 專屬 Tool</td>
+                        <td>私有協議 / 腳本引擎</td>
+                        <td>專用 TCP / IPC 代理</td>
+                    </tr>
+                    <tr>
+                        <td><strong>資源開銷</strong></td>
+                        <td>中等 (Rust 原生極快，視模型而定)</td>
+                        <td>高 (依賴大量 Token 截圖)</td>
+                        <td>極高 (完整肥大套件)</td>
+                        <td><span style="color:#34d399; font-weight:bold;">極低 (針對微型系統優化)</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>嵌入式系統適配</strong></td>
+                        <td>❌ 不適合本機運行 (僅適外部測試)</td>
+                        <td>❌ 完全不適合</td>
+                        <td>❌ 完全不適合</td>
+                        <td><span style="color:#34d399; font-weight:bold;">✅ 專門為嵌入式設計</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card" style="margin-top: 24px;">
+            <div class="card-title" style="margin-bottom: 12px;">💡 總結研判與架構決策指引</div>
+            <ol style="padding-left: 20px; color: var(--text-muted); line-height: 1.8;">
+                <li><strong>如果您是開發桌面端 AI Agent：</strong>Cua 是目前開源界在處理「真人協同作業（Human-in-the-loop）」體驗最為極致的框架。它的「No-Foreground」背景驅動能力，解決了過去所有桌面 Agent 動態操作時直接癱瘓使用者電腦的致命硬傷。</li>
+                <li><strong>如果您想為 Agent 提供隔離執行環境：</strong>Cua 旗下的 <code>Lume</code>（針對 Apple Silicon macOS）與 <code>Fleets</code>（針對 Linux 容器）提供了無人值守與雲端彈性銷毀的標準解法。</li>
+                <li><strong>如果您從事嵌入式或邊緣物聯網開發：</strong>請勿嘗試把 Cua 塞入微控制器或無頭網關。針對嵌入式 HMI 自動化，優先採用 <code>uinput</code> 核心驅動模擬、Linux Event 節點或 <code>Qt Test</code> 測試框架；若需要 AI 視覺自動檢驗，請採用「外部主機跑 Cua + 影像擷取卡」之黑盒測試架構。</li>
+            </ol>
+        </div>
+    </section>
+
+</div>
+
+<footer>
+    <p>報告產出：Google DeepMind Antigravity Coding Assistant &nbsp;|&nbsp; 目標儲存庫：<a href="https://github.com/Child-pi/cua">Child-pi/cua</a></p>
+    <p style="margin-top: 8px; font-size: 0.82rem; color: #6b7280;">本文件採用 HTML5 / CSS3 原生無相依自包含格式封裝，適用於本機雙擊開啟、靜態 Web 部署或 GitHub Pages 託管。</p>
+</footer>
+
+</body>
+</html>
